@@ -12,6 +12,8 @@ public class Main {
   public ArrayList<Endpoint> endpoints = new ArrayList<>();
   public ArrayList<Request> requests = new ArrayList<>();
 
+  public int cache_size;
+
   public static void main(String[] args) {
     new Main(args[0], args[1]);
   }
@@ -19,6 +21,19 @@ public class Main {
   public Main(String inputFile, String outputFile) {
     loadFile(inputFile);
     printInfo();
+    removeTooBig();
+  }
+
+  public void removeTooBig() {
+    ArrayList<Video> toRemove = new ArrayList<>();
+
+    for (Video video : videos) {
+      if (video.size > cache_size) {
+        toRemove.add(video);
+      }
+    }
+
+    videos.removeAll(toRemove);
   }
 
   public void printInfo() {
@@ -38,7 +53,7 @@ public class Main {
 
       // Create caches
       int cache_count = Integer.parseInt(amounts[3]);
-      int cache_size = Integer.parseInt(amounts[4]);
+      cache_size = Integer.parseInt(amounts[4]);
 
       for (int i = 0; i < cache_count; i++) {
         caches.add(new Cache(i + 1, cache_size));
