@@ -35,11 +35,14 @@ public class Main {
       return Integer.compare(b.amount, a.amount);
     });
 
-    videos.stream().forEach((Video v) -> {
-      // System.out.println(v.toString());
+    boolean added;
 
-      // HashMap<Cache, Integer> countChecks = new HashMap<>();
+    HashMap<Video, HashMap<Cache, Integer>> videoMap = new HashMap<>();
+
+    for (Video v : videos) {
       HashMap<Cache, Integer> latencyMap = new HashMap<>();
+      HashMap<Cache, Integer> countMap = new HashMap<>();
+      HashMap<Cache, Integer> averageMap = new HashMap<>();
 
       v.requests.forEach((Request r) ->  {
         for (Cache c : r.endpoint.caches.keySet()) {
@@ -47,23 +50,51 @@ public class Main {
           int current_latency = r.endpoint.caches.get(c);
 
           latencyMap.put(c, total_latency + (r.amount * current_latency));
+          countMap.put(c, countMap.containsKey(c) ? countMap.get(c) + 1 : 0);
         }
       });
 
-      Optional<Entry<Cache, Integer>> lowest =  latencyMap.entrySet().stream()
-        .filter((c) -> c.getKey().hasSpaceFor(v))
-        .sorted((a, b) -> Integer.compare(a.getValue(), b.getValue()))
-        .findFirst();
-
-      if (lowest.isPresent()) {
-        Cache cache = lowest.get().getKey();
-        cache.addToCache(v);
+      for (Cache c : latencyMap.keySet()) {
+        if (countMap.get(c) > 0) {
+          averageMap.put(c, latencyMap.get(c) / countMap.get(c));
+        }
       }
-    });
 
-    caches.forEach((c) -> {
-      System.out.println(c.output());
-    });
+      videoMap.put(v, averageMap);
+    }
+
+    System.out.println("Calculated lowest latency");
+
+    do {
+      added = false;
+
+      for (Video v : videos) {
+        HashMap<Cache, Integer> latencyMap = videoMap.get(v);
+
+        Optional<Entry<Cache, Integer>> item = latencyMap.entrySet().stream()
+          .filter((c) -> c.getKey().hasSpaceFor(v) && !c.getKey().videoInCache(v))
+          .sorted((a, b) -> Integer.compare(a.getValue(), b.getValue()))
+          .findFirst();
+
+        if (item.isPresent()) {
+          Cache c = item.get().getKey();
+          added |= c.addToCache(v);
+        }
+      }
+    } while(added && caches.stream().anyMatch(c -> c.size > 0));
+
+    String output = "";
+
+    long count = caches.stream().filter((c) -> c.videos.size() > 0).count();
+
+    output += count + "\n";
+    output += caches.stream()
+      .filter((c) -> c.videos.size() > 0)
+      .map((c) -> c.output())
+      .reduce((a, b) -> a + "\n" + b)
+      .get();
+
+    saveFile(outputFile, output);
   }
 
   public void removeTooBig() {
@@ -149,6 +180,9 @@ public class Main {
   public void saveFile(String outputFile, String data) {
     try {
       BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+
+      writer.write(data);
+      writer.flush();
 
       writer.close();
     } catch (IOException ex) {
