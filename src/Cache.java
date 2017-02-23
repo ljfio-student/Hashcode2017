@@ -9,4 +9,20 @@ public class Cache {
     this.id = id;
     this.size = size;
   }
+
+  public void addToCache(Video video) {
+    videos.add(video);
+    size -= video.size;
+  }
+
+  public boolean hasSpaceFor(Video video) {
+    return video.size <= size;
+  }
+
+  public String output() {
+    return id + " " + videos.stream()
+      .map((v) -> v.id)
+      .map(Object::toString)
+      .reduce((a, b) -> a + " " + b.toString());
+  }
 }

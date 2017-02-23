@@ -5,6 +5,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map.Entry;
+import java.util.Optional;
 
 public class Main {
   public ArrayList<Video> videos = new ArrayList<>();
@@ -21,7 +25,45 @@ public class Main {
   public Main(String inputFile, String outputFile) {
     loadFile(inputFile);
     printInfo();
-    removeTooBig();
+    // removeTooBig();
+
+    requests.stream().forEach((Request r) -> {
+      r.video.addRequests(r);
+    });
+
+    Collections.sort(videos, (Video a, Video b) -> {
+      return Integer.compare(b.amount, a.amount);
+    });
+
+    videos.stream().forEach((Video v) -> {
+      // System.out.println(v.toString());
+
+      // HashMap<Cache, Integer> countChecks = new HashMap<>();
+      HashMap<Cache, Integer> latencyMap = new HashMap<>();
+
+      v.requests.forEach((Request r) ->  {
+        for (Cache c : r.endpoint.caches.keySet()) {
+          int total_latency = latencyMap.containsKey(c) ? latencyMap.get(c) : 0;
+          int current_latency = r.endpoint.caches.get(c);
+
+          latencyMap.put(c, total_latency + (r.amount * current_latency));
+        }
+      });
+
+      Optional<Entry<Cache, Integer>> lowest =  latencyMap.entrySet().stream()
+        .filter((c) -> c.getKey().hasSpaceFor(v))
+        .sorted((a, b) -> Integer.compare(a.getValue(), b.getValue()))
+        .findFirst();
+
+      if (lowest.isPresent()) {
+        Cache cache = lowest.get().getKey();
+        cache.addToCache(v);
+      }
+    });
+
+    caches.forEach((c) -> {
+      System.out.println(c.output());
+    });
   }
 
   public void removeTooBig() {
@@ -56,14 +98,14 @@ public class Main {
       cache_size = Integer.parseInt(amounts[4]);
 
       for (int i = 0; i < cache_count; i++) {
-        caches.add(new Cache(i + 1, cache_size));
+        caches.add(new Cache(i, cache_size));
       }
 
       // Load in the video information
       String[] video_info = reader.readLine().split(" ");
 
       for (int i = 0; i < video_count; i++) {
-        videos.add(new Video(i + 1, Integer.parseInt(video_info[i])));
+        videos.add(new Video(i, Integer.parseInt(video_info[i])));
       }
 
       // Read in the rest of the data
@@ -84,7 +126,7 @@ public class Main {
           latency_map.put(caches.get(cache_index), new Integer(cache_latency));
         }
 
-        endpoints.add(new Endpoint(data_center_latency, latency_map));
+        endpoints.add(new Endpoint(i, data_center_latency, latency_map));
       }
 
       // Read in the requests

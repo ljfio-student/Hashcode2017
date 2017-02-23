@@ -8,4 +8,8 @@ public class Request {
     this.endpoint = endpoint;
     this.amount = amount;
   }
+
+  public String toString() {
+    return String.format("%d %s %s", amount, video.toString(), endpoint.toString());
+  }
 }
