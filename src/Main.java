@@ -10,13 +10,14 @@ public class Main {
   public ArrayList<Video> videos;
   public ArrayList<Cache> caches;
   public ArrayList<Endpoint> endpoints;
+  public ArrayList<Request> requests;
 
   public static void main(String[] args) {
-
+    new Main(args[0], args[1]);
   }
 
-  public Main() {
-
+  public Main(String inputFile, String outputFile) {
+    loadFile(inputFile);
   }
 
   public void loadFile(String inputFile) {
@@ -57,17 +58,39 @@ public class Main {
         for (int j = 0; j < latency_count; j++) {
           String[] latency_info = reader.readLine().split(" ");
 
+          int cache_index = Integer.parseInt(latency_info[0]);
+          int cache_latency = Integer.parseInt(latency_info[1]);
 
+          latency_map.put(caches.get(cache_index), new Integer(cache_latency));
         }
 
         endpoints.add(new Endpoint(data_center_latency, latency_map));
       }
+
+      // Read in the requests
+      for (int i = 0; i < request_count; i++) {
+        String[] request_info = reader.readLine().split(" ");
+
+        int video_index = Integer.parseInt(request_info[0]);
+        int endpoint_index = Integer.parseInt(request_info[1]);
+        int amount = Integer.parseInt(request_info[2]);
+
+        requests.add(new Request(videos.get(video_index), endpoints.get(endpoint_index), amount));
+      }
+
+      reader.close();
     } catch (IOException ex) {
 
     }
   }
 
   public void saveFile(String outputFile, String data) {
-    BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+    try {
+      BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+
+      writer.close();
+    } catch (IOException ex) {
+
+    }
   }
 }
