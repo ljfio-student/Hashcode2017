@@ -7,10 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Main {
-  public ArrayList<Video> videos;
-  public ArrayList<Cache> caches;
-  public ArrayList<Endpoint> endpoints;
-  public ArrayList<Request> requests;
+  public ArrayList<Video> videos = new ArrayList<>();
+  public ArrayList<Cache> caches = new ArrayList<>();
+  public ArrayList<Endpoint> endpoints = new ArrayList<>();
+  public ArrayList<Request> requests = new ArrayList<>();
 
   public static void main(String[] args) {
     new Main(args[0], args[1]);
@@ -18,6 +18,11 @@ public class Main {
 
   public Main(String inputFile, String outputFile) {
     loadFile(inputFile);
+    printInfo();
+  }
+
+  public void printInfo() {
+    System.out.printf("Videos: %d\nCaches: %d\nEndpoints: %d\nRequests: %d\n", videos.size(), caches.size(), endpoints.size(), requests.size());
   }
 
   public void loadFile(String inputFile) {
