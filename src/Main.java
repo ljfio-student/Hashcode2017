@@ -31,13 +31,11 @@ public class Main {
       r.video.addRequests(r);
     });
 
-    Collections.sort(videos, (Video a, Video b) -> {
-      return Integer.compare(b.amount, a.amount);
-    });
 
     boolean added;
 
     HashMap<Video, HashMap<Cache, Integer>> videoMap = new HashMap<>();
+    HashMap<Video, Integer> bestSaving = new HashMap<>();
 
     for (Video v : videos) {
       HashMap<Cache, Integer> latencyMap = new HashMap<>();
@@ -47,7 +45,7 @@ public class Main {
       v.requests.forEach((Request r) ->  {
         for (Cache c : r.endpoint.caches.keySet()) {
           int total_latency = latencyMap.containsKey(c) ? latencyMap.get(c) : 0;
-          int current_latency = r.endpoint.caches.get(c);
+          int current_latency = Math.abs(r.endpoint.caches.get(c) - r.endpoint.latency);
 
           latencyMap.put(c, total_latency + (r.amount * current_latency));
           countMap.put(c, countMap.containsKey(c) ? countMap.get(c) + r.amount : r.amount);
@@ -61,9 +59,20 @@ public class Main {
       }
 
       videoMap.put(v, averageMap);
+
+      int best = averageMap.values().stream().max(Integer::max).orElse(0);
+
+      bestSaving.put(v, best);
     }
 
     System.out.println("Calculated lowest latency");
+
+    Collections.sort(videos, (Video a, Video b) -> {
+      Integer aSaving = bestSaving.get(a);
+      Integer bSaving = bestSaving.get(b);
+
+      return Integer.compare(bSaving, aSaving);
+    });
 
     do {
       added = false;
@@ -73,7 +82,7 @@ public class Main {
 
         Optional<Entry<Cache, Integer>> item = latencyMap.entrySet().stream()
           .filter((c) -> !c.getKey().videoInCache(v) && c.getKey().hasSpaceFor(v))
-          .sorted((a, b) -> Integer.compare(a.getValue(), b.getValue()))
+          .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
           .findFirst();
 
         if (item.isPresent()) {
@@ -92,7 +101,7 @@ public class Main {
       .filter((c) -> c.videos.size() > 0)
       .map((c) -> c.output())
       .reduce((a, b) -> a + "\n" + b)
-      .get();
+      .orElse("");
 
     saveFile(outputFile, output);
   }
