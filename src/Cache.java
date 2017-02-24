@@ -36,6 +36,6 @@ public class Cache {
       .map(Object::toString)
       .reduce((a, b) -> a + " " + b.toString());
 
-    return id + " " + (values.isPresent() ? values.get() : "");
+    return id + " " + values.orElse("");
   }
 }

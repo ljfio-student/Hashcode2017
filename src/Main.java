@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class Main {
   public ArrayList<Video> videos = new ArrayList<>();
@@ -39,8 +40,6 @@ public class Main {
 
     for (Video v : videos) {
       HashMap<Cache, Integer> latencyMap = new HashMap<>();
-      HashMap<Cache, Integer> countMap = new HashMap<>();
-      HashMap<Cache, Integer> averageMap = new HashMap<>();
 
       v.requests.forEach((Request r) ->  {
         for (Cache c : r.endpoint.caches.keySet()) {
@@ -48,19 +47,15 @@ public class Main {
           int current_latency = Math.abs(r.endpoint.caches.get(c) - r.endpoint.latency);
 
           latencyMap.put(c, total_latency + (r.amount * current_latency));
-          countMap.put(c, countMap.containsKey(c) ? countMap.get(c) + r.amount : r.amount);
         }
       });
 
-      for (Cache c : latencyMap.keySet()) {
-        if (countMap.get(c) > 0) {
-          averageMap.put(c, latencyMap.get(c) / countMap.get(c));
-        }
-      }
+      videoMap.put(v, latencyMap);
 
-      videoMap.put(v, averageMap);
-
-      int best = averageMap.values().stream().max(Integer::max).orElse(0);
+      int best = latencyMap.values().stream()
+        .mapToInt(a -> a)
+        .max()
+        .orElse(0);
 
       bestSaving.put(v, best);
     }
@@ -68,10 +63,7 @@ public class Main {
     System.out.println("Calculated lowest latency");
 
     Collections.sort(videos, (Video a, Video b) -> {
-      Integer aSaving = bestSaving.get(a);
-      Integer bSaving = bestSaving.get(b);
-
-      return Integer.compare(bSaving, aSaving);
+      return Integer.compare(bestSaving.get(b), bestSaving.get(a));
     });
 
     do {
@@ -80,17 +72,52 @@ public class Main {
       for (Video v : videos) {
         HashMap<Cache, Integer> latencyMap = videoMap.get(v);
 
-        Optional<Entry<Cache, Integer>> item = latencyMap.entrySet().stream()
+        Optional<Entry<Integer, ArrayList<Cache>>> item = latencyMap
+          .entrySet().stream() // Map from Caches with Latency to inverse
           .filter((c) -> !c.getKey().videoInCache(v) && c.getKey().hasSpaceFor(v))
-          .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+          .reduce(new HashMap<Integer, ArrayList<Cache>>(), (a, b) -> {
+            ArrayList<Cache> value = a.containsKey(b.getValue()) ?
+              a.get(b.getValue()) : new ArrayList<>();
+
+            value.add(b.getKey());
+
+            a.put(b.getValue(), value);
+
+            return a;
+          }, (a, b) -> {
+            for (Integer k : a.keySet()) {
+              if (b.containsKey(k)) {
+                a.get(k).addAll(b.get(k));
+              }
+            }
+
+            return a;
+          })
+          .entrySet().stream() // Find the best latency
+          .sorted((a, b) -> Integer.compare(b.getKey(), a.getKey()))
           .findFirst();
 
-        if (item.isPresent()) {
-          Cache c = item.get().getKey();
+        if (!item.isPresent()) {
+          continue;
+        }
+
+        Optional<Cache> cs = item.get().getValue()
+          .stream()
+          .sorted((a, b) -> Integer.compare(b.size, a.size))
+          .findFirst();
+
+        if (cs.isPresent()) {
+          Cache c = cs.get();
           added |= c.addToCache(v);
         }
       }
-    } while(added && caches.stream().anyMatch(c -> c.size > 0));
+    } while(added);
+
+    caches.stream()
+      .filter(c -> c.size > 0)
+      .forEach(c -> {
+        System.out.println(c.size);
+      });
 
     String output = "";
 
