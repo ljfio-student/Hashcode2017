@@ -63,7 +63,8 @@ public class Main {
     System.out.println("Calculated lowest latency");
 
     Collections.sort(videos, (Video a, Video b) -> {
-      return Integer.compare(bestSaving.get(b), bestSaving.get(a));
+      return Integer.compare(a.size, b.size);
+      //return Integer.compare(bestSaving.get(b), bestSaving.get(a));
     });
 
     do {
@@ -88,6 +89,12 @@ public class Main {
             for (Integer k : a.keySet()) {
               if (b.containsKey(k)) {
                 a.get(k).addAll(b.get(k));
+              }
+            }
+
+            for (Integer k : b.keySet()) {
+              if (!a.containsKey(k)) {
+                a.put(k, b.get(k));
               }
             }
 
