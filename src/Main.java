@@ -50,7 +50,7 @@ public class Main {
           int current_latency = r.endpoint.caches.get(c);
 
           latencyMap.put(c, total_latency + (r.amount * current_latency));
-          countMap.put(c, countMap.containsKey(c) ? countMap.get(c) + 1 : 0);
+          countMap.put(c, countMap.containsKey(c) ? countMap.get(c) + r.amount : r.amount);
         }
       });
 
@@ -72,7 +72,7 @@ public class Main {
         HashMap<Cache, Integer> latencyMap = videoMap.get(v);
 
         Optional<Entry<Cache, Integer>> item = latencyMap.entrySet().stream()
-          .filter((c) -> c.getKey().hasSpaceFor(v) && !c.getKey().videoInCache(v))
+          .filter((c) -> !c.getKey().videoInCache(v) && c.getKey().hasSpaceFor(v))
           .sorted((a, b) -> Integer.compare(a.getValue(), b.getValue()))
           .findFirst();
 
